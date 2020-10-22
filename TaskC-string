@@ -1,0 +1,199 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+
+using std::string;
+using std::vector;
+
+const int alphabet = 26;
+
+struct Vertex {
+	Vertex(int parent, char parCh);
+
+	char parCh;
+	int parent;
+	int suffix;
+	bool pat;
+	vector<int> indOfPat;
+	vector<int> edges;
+	vector<int> move;
+	vector<int> term;
+};
+
+Vertex::Vertex(int parent, char parCh)
+	:parent(parent), parCh(parCh), suffix(-1),
+	pat(false), edges(alphabet, -1), move(alphabet, -1)
+{}
+
+struct AhoCor {
+
+	AhoCor(const std::string& str);
+
+	void ans(const std::string& text);
+
+private:
+	string str;
+	vector<std::pair<int, int>> pos;
+	vector<Vertex> bohr;
+
+	int fast(int ind, char c);
+
+	int suf(int ind);
+
+	void findTermVer(int ind);
+};
+
+AhoCor::AhoCor(const std::string& str) 
+	:str(str), bohr(1, Vertex(0, -1))
+{
+	bohr[0].suffix = 0;
+
+	//////////////////////////////////////////////////////
+
+	std::pair<int, int> cur_pos;
+
+	if ('a' <= str[0] && str[0] <= 'z') {
+		cur_pos.first = 0;
+		if (str[1] == '?') {
+			cur_pos.second = 0;
+			pos.push_back(cur_pos);
+		}
+	}
+	
+	int l = static_cast<int>(str.length()) - 1;
+
+	for (int i = 1; i < l; ++i) {
+		if (str[i - 1] == '?' && 'a' <= str[i] && str[i] <= 'z') {
+			cur_pos.first = i;
+		}
+		if (str[i + 1] == '?' && 'a' <= str[i] && str[i] <= 'z') {
+			cur_pos.second = i;
+			pos.push_back(cur_pos);
+		}
+	}
+
+	if (str[l - 1] == '?' && 'a' <= str[l] && str[l] <= 'b') {
+		cur_pos.first = l;
+		cur_pos.second = l;
+		pos.push_back(cur_pos);
+	} else if ('a' <= str[l] && str[l] <= 'b') {
+		cur_pos.second = l;
+		pos.push_back(cur_pos);
+	}
+
+	///////////////////////////////////////////////////////////
+
+	for (int i = 0; i < static_cast<int>(pos.size()); ++i) {
+		int cur_ver = 0;
+		for (int j = pos[i].first; j <= pos[i].second; ++j) {
+			char temp = str[j] - 'a';
+			if (bohr[cur_ver].edges[temp] == -1) {
+				bohr.push_back(Vertex(cur_ver, temp));
+				bohr[cur_ver].edges[temp] = static_cast<int>(bohr.size()) - 1;
+			}
+			cur_ver = bohr[cur_ver].edges[temp];
+		}
+		bohr[cur_ver].pat = true;
+		bohr[cur_ver].indOfPat.push_back(i);
+	}
+}
+
+void AhoCor::ans(const std::string& text) {
+	int l = static_cast<int>(text.length());
+	std::vector<int> enter(l, 0);
+	int cur_ver = 0;
+	int temp = static_cast<int>(str.length());
+
+	if (pos.size() == 0) {
+		for (int i = 0; i < l - temp + 1; ++i) {
+			std::cout << i << " ";
+		}
+		return;
+	}
+
+	for (int i = 0; i < l; ++i) {
+		cur_ver = fast(cur_ver, text[i] - 'a');
+		int suf_ver = cur_ver;
+
+		while (suf_ver != 0) {
+			if (bohr[suf_ver].pat) {
+				for (int j = 0; j < bohr[suf_ver].indOfPat.size(); ++j) {
+					int right = pos[bohr[suf_ver].indOfPat[j]].second;
+
+					int st = i - right;
+
+					int right_border = st + static_cast<int>(str.length()) - 1;
+
+					if (st >= 0 && right_border < l) {
+						++enter[st];
+					}
+				}
+			}
+
+			suf_ver = suf(suf_ver);
+		} 
+	}
+	
+	int len = static_cast<int>(enter.size());
+
+	for (int i = 0; i < len; i++) {
+		if (enter[i] == static_cast<int>(pos.size())) {
+			std::cout << i << " ";
+		}
+	}
+}
+
+int AhoCor::fast(int ind, char c) {
+	int temp = bohr[ind].edges[c];
+
+	if (bohr[ind].move[c] == -1) {
+		if (temp != -1) {
+			bohr[ind].move[c] = temp;
+		} else if (ind == 0) {
+			bohr[ind].move[c] = 0;
+		} else {
+			bohr[ind].move[c] = fast(suf(ind), c);
+		}
+	}
+
+	return bohr[ind].move[c];
+}
+
+int AhoCor::suf(int ind) {
+	if (bohr[ind].suffix == -1) {
+		if (bohr[ind].parent != 0) {
+			bohr[ind].suffix = fast(suf(bohr[ind].parent), bohr[ind].parCh);
+		} else {
+			bohr[ind].suffix = 0;
+		}
+	}
+
+	return bohr[ind].suffix;
+}
+
+void AhoCor::findTermVer(int ind) {
+	int cur_ind = ind;
+
+	while (!bohr[cur_ind].term.size() && cur_ind != 0) {
+		if (bohr[cur_ind].pat && ind != 0) {
+			bohr[ind].term.push_back(cur_ind);
+		}
+		ind = suf(ind);
+	}
+
+	for (int i = 0; i < bohr[cur_ind].term.size(); ++i) {
+		bohr[ind].term.push_back(bohr[cur_ind].term[i]);
+	}
+}
+
+int main() {
+	string pattern, text;
+	std::cin >> pattern >> text;
+
+	AhoCor temp(pattern);
+
+	temp.ans(text);
+
+	return 0;
+}
