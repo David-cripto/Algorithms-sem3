@@ -1,0 +1,217 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <map>
+
+using std::string;
+using std::vector;
+
+const int alphabet = 26;
+
+struct Vertex {
+	int left;
+	int right;
+	int suf;
+	int parent;
+	bool has_dollar;
+	bool has_la;
+	std::map<char, int> edges;
+
+	Vertex(int left = -1, int right = -1, int parent = -1) :
+		left(left), right(right), parent(parent), suf(0),
+		has_dollar(false), has_la(false)
+	{}
+};
+
+struct Suftree {
+	Suftree(string& text, long long k, int ind_of_dol, int ind_of_lat);
+
+	void ans();
+
+	void DFS(int ver);
+
+	void nFun(int ver, int& ver_ans);
+
+private:
+	void ukkad(char ch);
+
+	int cur_v;
+	int cur_pos;
+	int cur_pos_str;
+	long long k;
+	int ind_of_dol;
+	int ind_of_lat;
+	string text;
+	vector<Vertex> tree;
+};
+
+
+Suftree::Suftree(string& text, long long k, int ind_of_dol, int ind_of_lat) :
+	cur_v(0), cur_pos(0), cur_pos_str(0),
+	text(text), tree(2, Vertex()), k(k),
+	ind_of_dol(ind_of_dol), ind_of_lat(ind_of_lat)
+{
+	int len = static_cast<int>(text.length());
+
+	for (int i = 0; i < alphabet; ++i) { // 1 -- Джокер вершина. Мацкевич так называл вершину.
+		char temp = 'a' + i;
+		tree[1].edges[temp] = 0;
+	}
+
+	tree[1].edges['#'] = 0;
+	tree[1].edges['$'] = 0;
+	tree[0].suf = 1;
+
+	for (int i = 0; i < len; ++i) {
+		char ch = text[i];
+		ukkad(ch);
+		++cur_pos_str;
+	}
+}
+
+void Suftree::ans() {
+	int ver_ans = 0;
+	string ans_str;
+
+	DFS(0);
+
+	nFun(0, ver_ans);
+
+	if (k > 0) { // не нашли вершину 
+		std::cout << -1;
+		return;
+	} else {
+		while (ver_ans != 0) {//идём в корень
+			int iter = 0;
+			int len = tree[ver_ans].right - tree[ver_ans].left + k;
+			while (iter <= len) {
+				ans_str.push_back(text[len - iter + tree[ver_ans].left]);
+				++iter;
+			}
+			k = 0;
+			ver_ans = tree[ver_ans].parent;
+		}
+	}
+
+	int len_str = static_cast<int>(ans_str.length());
+
+	for (int i = 0; i < len_str; ++i) {
+		std::cout << ans_str[len_str - 1 - i];
+	}
+}
+
+void Suftree::DFS(int ver) {
+	if (tree[ver].right >= ind_of_dol && tree[ver].left <= ind_of_dol) {
+		tree[ver].has_dollar = true;//обновляю $
+	}
+
+	if (tree[ver].left > ind_of_dol && tree[ver].right == ind_of_lat) {//обновляю #
+		tree[ver].has_la = true;
+	}
+
+	for (auto it = tree[ver].edges.begin(); it != tree[ver].edges.end(); ++it) {
+		DFS(it->second);//DFS по значениям
+
+		if (!tree[ver].has_dollar && tree[it->second].has_dollar) {//обновляю $ через ребенка
+			tree[ver].has_dollar = true;
+		}
+
+		if (!tree[ver].has_la && tree[it->second].has_la) {//обновляю # через ребенка
+			tree[ver].has_la = true;
+		}
+	}
+}
+
+void Suftree::nFun(int ver, int& ver_ans) {
+	if (ver != 0) {
+		k -= (tree[ver].right - tree[ver].left + 1);
+	}
+
+	if (k <= 0) {
+		ver_ans = ver;
+		return;
+	}
+
+	for (auto it = tree[ver].edges.begin(); it != tree[ver].edges.end(); ++it) {
+		if (!tree[it->second].has_dollar || !tree[it->second].has_la) {
+			continue;
+		}
+
+		nFun(it->second, ver_ans);//DFS по значениям
+
+		if (k <= 0) {
+			return;
+		}
+	}
+}
+
+void Suftree::ukkad(char ch) {
+	int len = static_cast<int>(text.length());
+
+	if (tree[cur_v].right < cur_pos) { // вышли за ребро, тогда переходим к следующему ребенку
+		if (tree[cur_v].edges.find(ch) == tree[cur_v].edges.end()) { // нет ребёнка по данному символу, делаем лист. Пункт 2а
+			tree.push_back(Vertex(cur_pos_str, len - 1, cur_v));
+			tree[cur_v].edges[ch] = static_cast<int>(tree.size()) - 1;
+			cur_v = tree[cur_v].suf;
+			cur_pos = tree[cur_v].right + 1;
+			ukkad(ch);
+			return;
+		}
+
+		cur_v = tree[cur_v].edges[ch];
+		cur_pos = tree[cur_v].left;
+	}
+
+	if (cur_pos == -1 || ch == text[cur_pos]) {
+		++cur_pos; // совпадает пункт 3. Просто идём дальше
+		return;
+	}
+	// пункт 2б разделяем ребро. Ох, как не хочу это делать :)
+	tree.push_back(Vertex(tree[cur_v].left, cur_pos - 1, tree[cur_v].parent));
+	int n_ver = static_cast<int>(tree.size()) - 1;
+	tree[n_ver].edges[text[cur_pos]] = cur_v;
+	tree[cur_v].left = cur_pos;
+	tree[tree[cur_v].parent].edges[text[tree[n_ver].left]] = n_ver;
+	tree[cur_v].parent = n_ver;
+
+	tree.push_back(Vertex(cur_pos_str, len - 1, n_ver));
+	int n_ver_2 = static_cast<int>(tree.size()) - 1;
+	tree[n_ver].edges[text[cur_pos_str]] = n_ver_2;
+
+	cur_v = tree[tree[n_ver].parent].suf;
+	cur_pos = tree[n_ver].left;
+
+	while (cur_pos <= tree[n_ver].right) { // находим конец суфф. 
+		cur_v = tree[cur_v].edges[text[cur_pos]];
+		cur_pos += 1 + tree[cur_v].right - tree[cur_v].left;
+	}
+
+	if (cur_pos == tree[n_ver].right + 1) {// вершина
+		tree[n_ver].suf = cur_v;
+	}
+	else {// не вершина
+		tree[n_ver].suf = n_ver_2 + 1;
+	}
+
+	cur_pos = tree[cur_v].right - (cur_pos - tree[n_ver].right) + 2;// текущая позиция на новом ребре
+
+	ukkad(ch);
+}
+
+int main() {
+	std::ios::sync_with_stdio(false);
+	string s, t;
+	long long k;
+	std::cin >> s >> t >> k;
+	string temp = s + "$" + t + "#";
+	int ind_of_dol = static_cast<int>(s.length());
+	int ind_of_lat = static_cast<int>(s.length()) + static_cast<int>(t.length()) + 1;
+
+	Suftree tree(temp, k, ind_of_dol, ind_of_lat);
+
+	tree.ans();
+
+	return 0;
+}
