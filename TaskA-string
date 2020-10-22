@@ -1,0 +1,36 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+
+using std::string;
+
+std::vector<int> prefix(std::string s) {
+	int n = static_cast<int>(s.length());//len of s
+	std::vector<int> pref(n);// prefix-fun
+	for (int i = 1; i < n; ++i) {
+		int k = pref[i - 1];
+		while (k > 0 && s[i] != s[k]) {//count k
+			k = pref[k - 1];
+		}
+		if (s[i] == s[k]) {
+			k++;
+		}
+		pref[i] = k;
+	}
+	return pref;
+}
+
+int main() {
+	std::string pattern;
+	std::string str;
+	std::cin >> pattern >> str;
+	string concat = pattern + "#" + str;
+	std::vector<int> p = prefix(concat);
+	for (int i = 0; i < p.size(); ++i) {
+		if (p[i] == pattern.length()) {
+			std::cout << i - pattern.length() - p[i] << " ";
+		}
+	}
+	return 0;
+}
