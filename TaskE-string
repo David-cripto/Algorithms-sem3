@@ -1,0 +1,162 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <map>
+
+using std::string;
+using std::vector;
+
+const int alphabet = 26;
+
+struct Vertex {
+	int left;
+	int right;
+	int suf;
+	int parent;
+	std::map<char, int> edges;
+
+	Vertex(int left = -1, int right = -1, int parent = -1) :
+		left(left), right(right), parent(parent), suf(0)
+	{}
+};
+
+struct Suftree {
+	Suftree(string& text, int len_of_first_str);
+
+	void ans();
+
+	void DFS(int ver, int& i);
+
+private:
+	void ukkad(char ch);
+
+	int cur_v;
+	int cur_pos;
+	int cur_pos_str;
+	int len_of_first_str;
+	string text;
+	vector<Vertex> tree;
+	vector<int> re_num_ver;
+};
+
+
+Suftree::Suftree(string& text, int len_of_first_str) :
+	cur_v(0), cur_pos(0), cur_pos_str(0),
+	len_of_first_str(len_of_first_str),
+	text(text), tree(2, Vertex())
+{
+	int len = static_cast<int>(text.length());
+
+	for (int i = 0; i < alphabet; ++i) { // 1 -- Джокер вершина. Мацкевич так называл вершину.
+		char temp = 'a' + i;
+		tree[1].edges[temp] = 0;
+	}
+
+	tree[1].edges['#'] = 0;
+	tree[1].edges['$'] = 0;
+	tree[0].suf = 1;
+
+	for (int i = 0; i < len; ++i) {
+		char ch = text[i];
+		ukkad(ch);
+		++cur_pos_str;
+	}
+}
+
+void Suftree::ans() {
+	int i = 1;
+	int len = static_cast<int>(tree.size());
+	re_num_ver.resize(len, 0);//выстраиваю вершины в правльном порядке
+
+	std::cout << len - 1 << "\n";
+
+	DFS(0, i);
+}
+
+void Suftree::DFS(int ver, int& i) {
+
+	if (ver != 0) {
+		re_num_ver[ver] = i++;
+		std::cout << re_num_ver[tree[ver].parent] << " ";
+		if (tree[ver].left >= len_of_first_str) {
+			std::cout << "1" << " " << tree[ver].left - len_of_first_str << " " << tree[ver].right - len_of_first_str + 1 << "\n";
+		} else if(tree[ver].left < len_of_first_str && tree[ver].right < len_of_first_str) {
+			std::cout << "0" << " " << tree[ver].left << " " << tree[ver].right + 1 << "\n";
+		} else {
+			std::cout << "0" << " " << tree[ver].left << " " << len_of_first_str << "\n";
+		}
+	}
+
+	for (auto it = tree[ver].edges.begin(); it != tree[ver].edges.end(); ++it) {
+		DFS(it->second, i);//DFS по значениям
+	}
+}
+
+void Suftree::ukkad(char ch) {
+	int len = static_cast<int>(text.length());
+
+	if (tree[cur_v].right < cur_pos) { // вышли за ребро, тогда переходим к следующему ребенку
+		if (tree[cur_v].edges.find(ch) == tree[cur_v].edges.end()) { // нет ребёнка по данному символу, делаем лист. Пункт 2а
+			tree.push_back(Vertex(cur_pos_str, len - 1, cur_v));
+			tree[cur_v].edges[ch] = static_cast<int>(tree.size()) - 1;
+			cur_v = tree[cur_v].suf;
+			cur_pos = tree[cur_v].right + 1;
+			ukkad(ch);
+			return;
+		}
+
+		cur_v = tree[cur_v].edges[ch];
+		cur_pos = tree[cur_v].left;
+	}
+
+	if ( cur_pos == -1 || ch == text[cur_pos]) {
+		++cur_pos; // совпадает пункт 3. Просто идём дальше
+		return;
+	}
+	// пункт 2б разделяем ребро. Ох, как не хочу это делать :)
+	tree.push_back(Vertex(tree[cur_v].left, cur_pos - 1, tree[cur_v].parent));
+	int n_ver = static_cast<int>(tree.size()) - 1;
+	tree[n_ver].edges[text[cur_pos]] = cur_v;
+	tree[cur_v].left = cur_pos;
+	tree[tree[cur_v].parent].edges[text[tree[n_ver].left]] = n_ver;
+	tree[cur_v].parent = n_ver;
+
+	tree.push_back(Vertex(cur_pos_str, len - 1, n_ver));
+	int n_ver_2 = static_cast<int>(tree.size()) - 1;
+	tree[n_ver].edges[text[cur_pos_str]] = n_ver_2;
+
+	cur_v = tree[tree[n_ver].parent].suf;
+	cur_pos = tree[n_ver].left;
+
+	while (cur_pos <= tree[n_ver].right) { // находим конец суфф. 
+		cur_v = tree[cur_v].edges[text[cur_pos]];
+		cur_pos += 1 + tree[cur_v].right - tree[cur_v].left;
+	}
+
+	if (cur_pos == tree[n_ver].right + 1) {// вершина
+		tree[n_ver].suf = cur_v;
+	}
+	else {// не вершина
+		tree[n_ver].suf = n_ver_2 + 1;
+	}
+
+	cur_pos = tree[cur_v].right - (cur_pos - tree[n_ver].right) + 2;// текущая позиция на новом ребре
+
+	ukkad(ch);
+}
+
+int main() {
+	std::ios::sync_with_stdio(false);
+	string s, t;
+	std::cin >> s >> t;
+	string temp = s + t;
+	int len = static_cast<int>(s.length());
+
+	Suftree tree(temp, len);
+
+	tree.ans();
+
+	return 0;
+}
