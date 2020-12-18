@@ -15,7 +15,7 @@ struct Vertex {
 	int parent;
 	int suffix;
 	bool pat;
-	vector<int> indOfPat;
+	vector<int> ind_of_pat;
 	vector<int> edges;
 	vector<int> move;
 	vector<int> term;
@@ -29,33 +29,28 @@ Vertex::Vertex(int parent, char parCh, int alphabet = 26)
 
 struct AhoCorasik {
 
-	AhoCorasik(const std::string& str, vector<std::pair<int, int>>& pos);
+	AhoCorasik(const std::string& str, const vector<std::pair<int, int>>& pos);
 
-	vector<int> ans(const std::string& text);
+	vector<int> getEntries(const std::string& text);
 
 	
 private:
-	string str;
-	vector<std::pair<int, int>> pos;
-	vector<Vertex> trie;
+	string str_;
+	vector<std::pair<int, int>> pos_;
+	vector<Vertex> trie_;
 
-	int fast(int ind, char c);
+	int fast_(int ind, char c);
 
-	int suf(int ind);
+	int suf_(int ind);
 
-	void findTermVer(int ind);
-	const int alphabet = 26;
-
-	char first_char = 'a';
-	char sec_char = 'b';
-	char question_char = '?';
-	char last_char = 'z';
+	void findTermVer_(int ind);
 };
 
-AhoCorasik::AhoCorasik(const std::string& str, vector<std::pair<int, int>>& pos)
-	:str(str), trie(1, Vertex(0, -1)), pos(pos) 
+AhoCorasik::AhoCorasik(const std::string& str, const vector<std::pair<int, int>>& pos)
+	:str_(str), trie_(1, Vertex(0, -1)), pos_(pos) 
 {
-	trie[0].suffix = 0;
+	char first_char = 'a';
+	trie_[0].suffix = 0;
 
 	//////////////////////////////////////////////////////
 
@@ -65,24 +60,25 @@ AhoCorasik::AhoCorasik(const std::string& str, vector<std::pair<int, int>>& pos)
 		int cur_ver = 0;
 		for (int j = pos[i].first; j <= pos[i].second; ++j) {
 			char temp = str[j] - first_char;
-			if (trie[cur_ver].edges[temp] == -1) {
-				trie.push_back(Vertex(cur_ver, temp));
-				trie[cur_ver].edges[temp] = static_cast<int>(trie.size()) - 1;
+			if (trie_[cur_ver].edges[temp] == -1) {
+				trie_.push_back(Vertex(cur_ver, temp));
+				trie_[cur_ver].edges[temp] = static_cast<int>(trie_.size()) - 1;
 			}
-			cur_ver = trie[cur_ver].edges[temp];
+			cur_ver = trie_[cur_ver].edges[temp];
 		}
-		trie[cur_ver].pat = true;
-		trie[cur_ver].indOfPat.push_back(i);
+		trie_[cur_ver].pat = true;
+		trie_[cur_ver].ind_of_pat.push_back(i);
 	}
 }
 
-vector<int> AhoCorasik::ans(const std::string& text) {
+vector<int> AhoCorasik::getEntries(const std::string& text) {
 	int l = static_cast<int>(text.length());
-	vector<int> enter(l, 0);
+	vector<int> entries(l, 0);
 	int cur_ver = 0;
-	int temp = static_cast<int>(str.length());
+	int temp = static_cast<int>(str_.length());
+	char first_char = 'a';
 
-	if (pos.size() == 0) {
+	if (pos_.size() == 0) {
 		for (int i = 0; i < l - temp + 1; ++i) {
 			std::cout << i << " ";
 		}
@@ -90,75 +86,76 @@ vector<int> AhoCorasik::ans(const std::string& text) {
 	}
 
 	for (int i = 0; i < l; ++i) {
-		cur_ver = fast(cur_ver, text[i] - first_char);
+		cur_ver = fast_(cur_ver, text[i] - first_char);
 		int suf_ver = cur_ver;
 
 		while (suf_ver != 0) {
-			if (trie[suf_ver].pat) {
-				for (int j = 0; j < trie[suf_ver].indOfPat.size(); ++j) {
-					int right = pos[trie[suf_ver].indOfPat[j]].second;
+			if (trie_[suf_ver].pat) {
+				for (int j = 0; j < trie_[suf_ver].ind_of_pat.size(); ++j) {
+					int right = pos_[trie_[suf_ver].ind_of_pat[j]].second;
 
 					int st = i - right;
 
-					int right_border = st + static_cast<int>(str.length()) - 1;
+					int right_border = st + static_cast<int>(str_.length()) - 1;
 
 					if (st >= 0 && right_border < l) {
-						++enter[st];
+						++entries[st];
 					}
 				}
 			}
 
-			suf_ver = suf(suf_ver);
+			suf_ver = suf_(suf_ver);
 		} 
 	}
 
-	return enter;
+	return entries;
 }
 
-int AhoCorasik::fast(int ind, char c) {
-	int temp = trie[ind].edges[c];
+int AhoCorasik::fast_(int ind, char c) {
+	int temp = trie_[ind].edges[c];
 
-	if (trie[ind].move[c] == -1) {
+	if (trie_[ind].move[c] == -1) {
 		if (temp != -1) {
-			trie[ind].move[c] = temp;
+			trie_[ind].move[c] = temp;
 		} else if (ind == 0) {
-			trie[ind].move[c] = 0;
+			trie_[ind].move[c] = 0;
 		} else {
-			trie[ind].move[c] = fast(suf(ind), c);
+			trie_[ind].move[c] = fast_(suf_(ind), c);
 		}
 	}
 
-	return trie[ind].move[c];
+	return trie_[ind].move[c];
 }
 
-int AhoCorasik::suf(int ind) {
-	if (trie[ind].suffix == -1) {
-		if (trie[ind].parent != 0) {
-			trie[ind].suffix = fast(suf(trie[ind].parent), trie[ind].parCh);
+int AhoCorasik::suf_(int ind) {
+	if (trie_[ind].suffix == -1) {
+		if (trie_[ind].parent != 0) {
+			trie_[ind].suffix = fast_(suf_(trie_[ind].parent), trie_[ind].parCh);
 		} else {
-			trie[ind].suffix = 0;
+			trie_[ind].suffix = 0;
 		}
 	}
 
-	return trie[ind].suffix;
+	return trie_[ind].suffix;
 }
 
-void AhoCorasik::findTermVer(int ind) {
+void AhoCorasik::findTermVer_(int ind) {
 	int cur_ind = ind;
 
-	while (!trie[cur_ind].term.size() && cur_ind != 0) {
-		if (trie[cur_ind].pat && ind != 0) {
-			trie[ind].term.push_back(cur_ind);
+	while (!trie_[cur_ind].term.size() && cur_ind != 0) {
+		if (trie_[cur_ind].pat && ind != 0) {
+			trie_[ind].term.push_back(cur_ind);
 		}
-		ind = suf(ind);
+		ind = suf_(ind);
 	}
 
-	for (int i = 0; i < trie[cur_ind].term.size(); ++i) {
-		trie[ind].term.push_back(trie[cur_ind].term[i]);
+	for (int i = 0; i < trie_[cur_ind].term.size(); ++i) {
+		trie_[ind].term.push_back(trie_[cur_ind].term[i]);
 	}
 }
 
-void parsing(const std::string& str, vector<std::pair<int, int>>& pos) {
+vector<std::pair<int, int>> parseString(const std::string& str) {
+	vector<std::pair<int, int>> pos;
 	std::pair<int, int> cur_pos;
 
 	char first_char = 'a';
@@ -195,31 +192,37 @@ void parsing(const std::string& str, vector<std::pair<int, int>>& pos) {
 		cur_pos.second = l;
 		pos.push_back(cur_pos);
 	}
+
+	return pos;
 }
 
-void solve(const string& pattern, const string& text) {
-	vector<std::pair<int, int>> pos;
-
-	parsing(pattern, pos);
+vector<int> solve(const string& pattern, const string& text) {
+	vector<std::pair<int, int>> pos = parseString(pattern);
 
 	AhoCorasik temp(pattern, pos);
 
-	vector<int> ans = temp.ans(text);
+	vector<int> entries = temp.getEntries(text);
 
-	int n = static_cast<int>(ans.size());
+	int n = static_cast<int>(entries.size());
+	vector<int> ans;
 
 	for (int i = 0; i < n; i++) {
-		if (ans[i] == static_cast<int>(pos.size())) {
-			std::cout << i << " ";
+		if (entries[i] == static_cast<int>(pos.size())) {
+			ans.push_back(i);
 		}
 	}
+
+	return ans;
 }
 
 int main() {
 	string pattern, text;
 	std::cin >> pattern >> text;
 
-	solve(pattern, text);
+	vector<int> ans = solve(pattern, text);
 
+	for (int i = 0; i < static_cast<int>(ans.size()); i++) {
+		std::cout << ans[i] << " ";
+	}
 	return 0;
 }
