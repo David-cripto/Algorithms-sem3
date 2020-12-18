@@ -71,8 +71,8 @@ void stepFromKToKPlusOne(int len, vector<int>& suff_array, vector<vector<int>>& 
 			suff_array[--count[arr_of_classes[counter][pn[j]]]] = pn[j];
 		}
 
-		vector<int> clas_num_vec(len, 0);
-		arr_of_classes.push_back(clas_num_vec);
+		vector<int> class_num_vec(len, 0);
+		arr_of_classes.push_back(class_num_vec);
 
 		class_num = 1;
 
