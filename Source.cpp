@@ -9,7 +9,7 @@ using std::vector;
 
 const int alphabet = 27;
 
-void stepZero(int len, const string& text, vector<int>& suff_array, vector<vector<int>>& c, int& clas_num) {
+void stepZero(int len, const string& text, vector<int>& suff_array, vector<vector<int>>& arr_of_classes, int& class_num) {
 	vector<int> count(alphabet, 0);
 
 	for (int i = 0; i < len; ++i) {
@@ -36,54 +36,54 @@ void stepZero(int len, const string& text, vector<int>& suff_array, vector<vecto
 
 	for (int i = 1; i < len; ++i) {
 		if (text[suff_array[i]] != text[suff_array[i - 1]]) {
-			++clas_num;
+			++class_num;
 		}
 
-		c[0][suff_array[i]] = clas_num - 1;
+		arr_of_classes[0][suff_array[i]] = class_num - 1;
 	}
 
 }
 
-void stepFromKToKPlusOne(int len, vector<int>& suff_array, vector<vector<int>>& c, int& clas_num) {
+void stepFromKToKPlusOne(int len, vector<int>& suff_array, vector<vector<int>>& arr_of_classes, int& class_num) {
 	vector<int> pn(len);
 	int counter = 0;
 
 	for (int i = 1; i < len; i *= 2) {
 
 		for (int j = 0; j < len; ++j) {
-			pn[j] = suff_array[j] - (2 << counter);
+			pn[j] = suff_array[j] - (1 << counter);
 			if (pn[j] < 0) {
 				pn[j] += len;
 			}
 		}
 
-		vector<int> coun(clas_num, 0);
+		vector<int> count(class_num, 0);
 
 		for (int j = 0; j < len; ++j) {
-			++coun[c[counter][pn[j]]];
+			++count[arr_of_classes[counter][pn[j]]];
 		}
 
-		for (int j = 1; j < static_cast<int>(coun.size()); ++j) {
-			coun[j] += coun[j - 1];
+		for (int j = 1; j < static_cast<int>(count.size()); ++j) {
+			count[j] += count[j - 1];
 		}
 
 		for (int j = len - 1; j >= 0; --j) {
-			suff_array[--coun[c[counter][pn[j]]]] = pn[j];
+			suff_array[--count[arr_of_classes[counter][pn[j]]]] = pn[j];
 		}
 
 		vector<int> clas_num_vec(len, 0);
-		c.push_back(clas_num_vec);
+		arr_of_classes.push_back(clas_num_vec);
 
-		clas_num = 1;
+		class_num = 1;
 
 		for (int j = 1; j < len; ++j) {
-			int mid1 = (suff_array[j] + (2 << counter)) % len;
-			int mid2 = (suff_array[j - 1] + (2 << counter)) % len;
+			int mid1 = (suff_array[j] + (1 << counter)) % len;
+			int mid2 = (suff_array[j - 1] + (1 << counter)) % len;
 
-			if (c[counter][suff_array[j]] != c[counter][suff_array[j - 1]] || c[counter][mid1] != c[counter][mid2]) {
-				++clas_num;
+			if (arr_of_classes[counter][suff_array[j]] != arr_of_classes[counter][suff_array[j - 1]] || arr_of_classes[counter][mid1] != arr_of_classes[counter][mid2]) {
+				++class_num;
 			}
-			c[counter + 1][suff_array[j]] = clas_num - 1;
+			arr_of_classes[counter + 1][suff_array[j]] = class_num - 1;
 		}
 
 		counter++;
@@ -93,8 +93,8 @@ void stepFromKToKPlusOne(int len, vector<int>& suff_array, vector<vector<int>>& 
 vector<int> lcpArr(const vector<int>& suff_array, const string& str) {
 	int n = static_cast<int>(str.length());
 
-	vector<int> lcp(n - 1);
-	vector<int> pos(n - 1);
+	vector<int> lcp(n);
+	vector<int> pos(n);
 
 	for (int i = 0; i < n - 1; ++i) {
 		pos[suff_array[i]] = i;
@@ -124,13 +124,13 @@ vector<int> lcpArr(const vector<int>& suff_array, const string& str) {
 
 vector<int> buildSuffArray(const string& str) {
 	int len = static_cast<int>(str.length());
-	vector<vector<int>> c(1, vector<int>(len));
+	vector<vector<int>> arr_of_classes(1, vector<int>(len));
 
-	int clas_num = 1;
+	int class_num = 1;
 	vector<int> suff_array(len);
 
-	stepZero(len, str, suff_array, c, clas_num);
-	stepFromKToKPlusOne(len, suff_array, c, clas_num);
+	stepZero(len, str, suff_array, arr_of_classes, class_num);
+	stepFromKToKPlusOne(len, suff_array, arr_of_classes, class_num);
 
 	return suff_array;
 }
@@ -148,7 +148,7 @@ int getAnswer(const string& text) {
 		ans += (len - 1) - suff_array[i];
 	}
 
-	for (int i = 0; i < len - 2; i++) {
+	for (int i = 0; i < static_cast<int>(lcp.size()); i++) {
 		ans -= lcp[i];
 	}
 
