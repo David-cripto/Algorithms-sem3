@@ -27,11 +27,13 @@ long long algorithmOfManacher(const std::string& s) {
 	std::vector<long long> recursive_arr1(n);// z-fun
 	std::vector<long long> recursive_arr2(n);// z-fun
 	long long ans = 0;
-	long long l = 0;
-	long long r = 0;
+	long long l_0 = 0;
+	long long r_0 = 0;
+	long long l_1 = 0;
+	long long r_1 = 0;
 	for (long long i = 1; i < n; ++i) {
-		helpFunction(s, recursive_arr1, l, r, 0, i, n);
-		helpFunction(s, recursive_arr2, l, r, 1, i, n);
+		helpFunction(s, recursive_arr1, l_0, r_0, 0, i, n);
+		helpFunction(s, recursive_arr2, l_1, r_1, 1, i, n);
 	}
 
 	for (long long i = 0; i < n; ++i) {
