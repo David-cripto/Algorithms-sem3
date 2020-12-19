@@ -25,12 +25,21 @@ struct  Point;
 struct  Face;
 
 void rotate(Point& p, double angle);
-vector<Point*> downHull(std::vector<Point>& pointers, int left, int right);
+vector<Point*> downHull(std::vector<Point>& points, int left, int right);
 void findBridge(Point*& u, Point*& v);
 void findEvents(vector<Point*>& ans, vector<Point*>& rec1, vector<Point*>& rec2, Point*& u, Point*& v);
 double crossPorduct(const Point* p1, const Point* p2, const Point* p3);
 double calculateTime(const Point* p1, const Point* p2, const Point* p3);
 void buildFace(vector<Face>& ans, vector<Point*>& points, int number_of_case);
+
+enum Cases {
+	FIRST_CASE,
+	SECOND_CASE,
+	THIRD_CASE,
+	FOURTH_CASE,
+	FIFTH_CASE,
+	SIXTH_CASE,
+};
 
 struct Point {
 	double x;
@@ -64,7 +73,71 @@ struct Point {
 			return false;
 		}
 	}
+
+	Point& operator += (const Point& other);
+	Point& operator -= (const Point& other);
 };
+
+std::istream& operator >> (std::istream& in, Point& temp) {
+	in >> temp.y >> temp.x;
+	temp.z = temp.x * temp.x + temp.y * temp.y;
+	return in;
+}
+
+Point operator + (const Point& other1, const Point& other2);
+Point operator - (const Point& other1, const Point& other2);
+Point operator * (double number, const Point& other);
+Point operator * (const Point& other, double number);
+
+Point& Point::operator+=(const Point& other) {
+	this->x += other.x;
+	this->y += other.y;
+	this->z += other.z;
+
+	return *this;
+}
+
+Point& Point::operator-=(const Point& other) {
+	this->x -= other.x;
+	this->y -= other.y;
+	this->z -= other.z;
+
+	return *this;
+}
+
+Point operator-(const Point& other1, const Point& other2) {
+	Point temp(other1);
+
+	temp -= other2;
+
+	return temp;
+}
+
+Point operator*(double number, const Point& other) {
+	Point temp(other);
+	temp.x *= number;
+	temp.y *= number;
+	temp.z *= number;
+
+	return temp;
+}
+
+Point operator*(const Point& other, double number) {
+	Point temp(other);
+	temp.x *= number;
+	temp.y *= number;
+	temp.z *= number;
+
+	return temp;
+}
+
+Point operator+(const Point& other1, const Point& other2) {
+	Point temp(other1);
+
+	temp += other2;
+
+	return temp;
+}
 
 //грани многоугольника
 struct Face {
@@ -100,31 +173,31 @@ struct CompPoint {
 	}
 }cmp_point;
 
-vector<Face>algChan(vector<Point>& pointers) {
-	int n = static_cast<int>(pointers.size());
+vector<Face>algChan(vector<Point>& all_points) {
+	int n = static_cast<int>(all_points.size());
 	//сортируем точки по х
 	//Для чего?
 	//Ответ с отсылкой на статью: "Sort the points pˆ1, . . . , pˆn in increasing x-coordinates (recalling
 	//that points only move vertically).We use divide - and -conquer to solve the kinetic 2 - d problem."
-	std::sort(pointers.begin(), pointers.end(), cmp_point);
+	std::sort(all_points.begin(), all_points.end(), cmp_point);
 
 	//самая интересная часть алогритма
 	//Идея:
 	//Строим down hull и upper hull(Они строятся симметрично, поэтому
 	//хватит одной функции -- downHull)
 	//потом склеиваем их и получаем нужную нам оболочку
-	vector<Point*> points = downHull(pointers, 0, n);
+	vector<Point*> points = downHull(all_points, 0, n);
 	vector<Face> ans;
 
 	buildFace(ans, points, 1);//строим грани из точек нах в down hull
 
 	//переставляем точки для upper hull
 	for (int i = 0; i < n; ++i) {
-		pointers[i].next = nullptr;
-		pointers[i].prev = nullptr;
-		pointers[i].z = -pointers[i].z;
+		all_points[i].next = nullptr;
+		all_points[i].prev = nullptr;
+		all_points[i].z = -all_points[i].z;
 	}
-	points = downHull(pointers, 0, n);
+	points = downHull(all_points, 0, n);
 
 	buildFace(ans, points, 2);//строим грани из точек нах в upper hull
 
@@ -132,7 +205,7 @@ vector<Face>algChan(vector<Point>& pointers) {
 }
 
 //Ищем event(один из 6-ти случаев в статье) рекурсивно с помощью divide - and -conquer 
-vector<Point*> downHull(std::vector<Point>& pointers, int left, int right) {
+vector<Point*> downHull(std::vector<Point>& points, int left, int right) {
 	//осталась одна точка возвращаем пустой вектор
 	if (right - left == 1) {
 		vector<Point*> a;
@@ -141,11 +214,11 @@ vector<Point*> downHull(std::vector<Point>& pointers, int left, int right) {
 
 	int med = (left + right) / 2;
 
-	vector<Point*> rec1 = downHull(pointers, left, med);
-	vector<Point*> rec2 = downHull(pointers, med, right);
+	vector<Point*> rec1 = downHull(points, left, med);
+	vector<Point*> rec2 = downHull(points, med, right);
 
-	Point* u = &pointers[med - 1];
-	Point* v = &pointers[med];
+	Point* u = &points[med - 1];
+	Point* v = &points[med];
 
 	//находим мост
 	findBridge(u, v);
@@ -178,7 +251,7 @@ vector<Point*> downHull(std::vector<Point>& pointers, int left, int right) {
 			u->next = cur_ver;
 			cur_ver->prev = u;
 			cur_ver->next = v;
-			if (cur_ver->x <= pointers[med - 1].x) {
+			if (cur_ver->x <= points[med - 1].x) {
 				u = cur_ver;
 			}
 			else {
@@ -267,7 +340,7 @@ void findEvents(vector<Point*>& ans, vector<Point*>& rec1, vector<Point*>& rec2,
 		}
 
 		//перебор случаев
-		if (min_ind == 0) {
+		if (min_ind == FIRST_CASE) {
 			// левее u в L
 			if (l->x < u->x) {
 				ans.push_back(l);
@@ -275,7 +348,7 @@ void findEvents(vector<Point*>& ans, vector<Point*>& rec1, vector<Point*>& rec2,
 			l->doEvent();
 			temp1++;
 		}
-		else if (min_ind == 1) {
+		else if (min_ind == SECOND_CASE) {
 			// левее r в R
 			if (r->x > v->x) {
 				ans.push_back(r);
@@ -283,19 +356,19 @@ void findEvents(vector<Point*>& ans, vector<Point*>& rec1, vector<Point*>& rec2,
 			r->doEvent();
 			temp2++;
 		}
-		else if (min_ind == 2) {
+		else if (min_ind == THIRD_CASE) {
 			ans.push_back(v);
 			v = v->next;
 		}
-		else if (min_ind == 3) {
+		else if (min_ind == FOURTH_CASE) {
 			v = v->prev;
 			ans.push_back(v);
 		}
-		else if (min_ind == 4) {
+		else if (min_ind == FIFTH_CASE) {
 			ans.push_back(u);
 			u = u->prev;
 		}
-		else if (min_ind == 5) {
+		else if (min_ind == SIXTH_CASE) {
 			u = u->next;
 			ans.push_back(u);
 		}
@@ -431,8 +504,8 @@ void findEdgesInFaces(std::set<pair<int, int>>& edges, int a, int b) {
 }
 
 
-void findPointsPl(vector<Point>& pointers, vector<Point>& planar_hull) {
-	for (const Point& point : pointers) {
+void findPointsPl(vector<Point>& points, vector<Point>& planar_hull) {
+	for (const Point& point : points) {
 
 		while (planar_hull.size() >= 2) {
 			if (crossPorduct(&planar_hull[planar_hull.size() - 2], &planar_hull.back(), &point) > 0) {
@@ -464,7 +537,7 @@ void revPl(vector<Point>& pointers, vector<Point>& planar_hull) {
 //Проецируем точки на парабалоид и строим 
 //convex hull, которая выдаст нам триангулляцю 
 //из триангуляции получаем диагрмму Вороного
-void solve(vector<Point>& pointers) {
+double findAlmostAllNumbersOfEdgesOfVoronoiDiagrams(vector<Point>& points) {
 	//vector<Face> convex_hull = algChan(pointers);
 
 	//int n = static_cast<int>(pointers.size());
@@ -517,12 +590,12 @@ void solve(vector<Point>& pointers) {
 	//	std::cout << std::fixed << std::setprecision(6) << static_cast<double>(del_edges / count_of_non_close_polygon);
 	//}
 
-	vector<Face> convex_hull = algChan(pointers);
+	vector<Face> convex_hull = algChan(points);
 	std::set<pair<int, int>> edges;
-	vector<int> edges_number(pointers.size());
+	vector<int> edges_number(points.size());
 	int n_c_h = static_cast<int>(convex_hull.size());
 	vector<Point> planar_hull;//оболочка на плоскости
-	vector<bool> is_in_ceil(pointers.size(), false);
+	vector<bool> is_in_ceil(points.size(), false);
 
 	for (int i = 0; i < n_c_h; ++i) {
 		findEdgesInFaces(edges, convex_hull[i].f_point, convex_hull[i].s_point);
@@ -535,9 +608,9 @@ void solve(vector<Point>& pointers) {
 		edges_number[edge.second]++;
 	}
 
-	findPointsPl(pointers, planar_hull);
+	findPointsPl(points, planar_hull);
 
-	revPl(pointers, planar_hull);
+	revPl(points, planar_hull);
 
 	for (Point& i : planar_hull) {
 		is_in_ceil[i.number] = true;
@@ -545,7 +618,7 @@ void solve(vector<Point>& pointers) {
 
 	int count_of_non_close_polygon = 0;
 	int del_edges = 0;
-	for (int i = 0; i < pointers.size(); i++) {
+	for (int i = 0; i < points.size(); i++) {
 		if (!is_in_ceil[i]) {
 			del_edges += edges_number[i];
 			count_of_non_close_polygon++;
@@ -553,49 +626,28 @@ void solve(vector<Point>& pointers) {
 	}
 
 	if (count_of_non_close_polygon == 0) {
-		std::cout.precision(6);
-		std::cout << std::fixed << 0;
+		return 0;
 	}
 	else {
-		std::cout.precision(6);
-		std::cout << std::fixed << static_cast<double>(del_edges) / count_of_non_close_polygon;
+		return static_cast<double>(del_edges) / count_of_non_close_polygon;
 	}
 }
 
 int main() {
-	//while (true) {
-	//	vector<Point> pointers;
-	//	
-	//	int ind = 0;
-	//	int n = rand() % 10 + 1;
-	//	std::cout << "//////////////////////////////////" << "\n";
-	//	std::cout << n << "\n";
-
-	//	for (int i = 0; i < n; ++i) {
-	//		double x = rand() % 5 + 1;
-	//		double y = rand() % 5 + 1;
-	//		std::cout << x << " " << y << "\n";
-	//		Point temp(x, y, x * x + y * y, ind);//проецируем на парабалоид
-	//		pointers.push_back(temp);
-	//		ind++;
-	//	}
-
-	//	solve(pointers);
-	//	std::cout << "\n";
-	//}
-
-	vector<Point> pointers;
+	vector<Point> points;
 	double x, y;
 	int ind = 0;
+	Point temp;//проецируем на парабалоид
 
-	while (std::cin >> y >> x) {
-		Point temp(x, y, x * x + y * y, ind);//проецируем на парабалоид
+	while (std::cin >> temp) {
+		temp.number = ind;
 		rotate(temp, 0.000001);
-		pointers.push_back(temp);
+		points.push_back(temp);
 		ind++;
 	}
 
-	solve(pointers);
+	std::cout.precision(6);
+	std::cout << std::fixed << findAlmostAllNumbersOfEdgesOfVoronoiDiagrams(points);
 
 	return 0;
 }
