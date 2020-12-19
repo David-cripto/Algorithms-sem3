@@ -25,7 +25,7 @@ std::istream& operator >> (std::istream& in, Point& temp) {
 
 struct ConvexHull {
     ConvexHull(const vector<Point>& pointers) :
-        points_(pointers), perimeter_(0) {}
+        points_(pointers){}
 
     void algGraham();
 
@@ -33,7 +33,6 @@ struct ConvexHull {
 private:
     vector<Point> points_;//точки на плоскости
     Point p0_;//сама€ нижн€€ и лева€ точка. ќт неЄ будет идти отсчЄт
-    long double perimeter_;
     stack<Point> S_;
 };
 
@@ -150,17 +149,19 @@ void ConvexHull::algGraham() {
 }
 
 long double ConvexHull::findPerimeter() {
+    long double perimeter = 0;
+
     Point p0 = S_.top();
     Point p1 = S_.top();
     S_.pop();
 
     while (!S_.empty()) {
         Point p2 = S_.top();
-        perimeter_ += sqrt(dist(p1, p2));
+        perimeter += sqrt(dist(p1, p2));
         p1 = p2;
         S_.pop();
     }
-    perimeter_ += sqrt(dist(p0, p1));
+    perimeter += sqrt(dist(p0, p1));
 
-    return perimeter_;
+    return perimeter;
 }
