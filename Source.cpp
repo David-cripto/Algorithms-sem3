@@ -12,7 +12,7 @@ using std::vector;
 using std::iterator;
 using std::pair;
 
-const double eps = 1e-9;// для вычилсений с точностью
+const double EPS = 1e-9;// для вычилсений с точностью
 
 struct Segment;
 bool intersect(const Segment& a, const Segment& b);
@@ -25,25 +25,44 @@ struct Point {
     long long y;
 };
 
+std::istream& operator >> (std::istream& in, Point& temp) {
+    in >> temp.x >> temp.y;
+    return in;
+}
+
 struct Segment {
     Point begin;
     Point end;
     //номер отрезка для вывода соответствующему условию задачи
     int number;
 
+    Segment() = default;
+
     Segment(const Point& begin, const Point& end, int number) :
         begin(begin), end(end), number(number) {}
 
-    friend bool operator< (const Segment& a, const Segment& b);
+    friend bool operator<(const Segment& a, const Segment& b);
     double get_y(double x) const {
         //выводим у если не хватает точности(верт отрезки), то выодим начало у
-        if (std::abs(begin.x - end.x) < eps) {
+        if (std::abs(begin.x - end.x) < EPS) {
             return begin.y;
         }
 
         return begin.y + (end.y - begin.y) * (x - begin.x) / (end.x - begin.x);
     }
 };
+
+std::istream& operator >> (std::istream& in, Segment& temp) {
+    Point begin;
+    Point end;
+
+    in >> begin >> end;
+
+    temp.begin = begin;
+    temp.end = end;
+
+    return in;
+}
 
 struct Event {
     // события происходят по х
@@ -63,7 +82,7 @@ struct Event {
 //компаратор для Event
 struct CompEvents {
     bool operator()(const Event& e1, const Event& e2) {
-        if (std::abs(e1.event_x - e2.event_x) < eps) {// события по одной вертикали
+        if (std::abs(e1.event_x - e2.event_x) < EPS) {// события по одной вертикали
             return e1.is_begin > e2.is_begin;
         }
 
@@ -78,9 +97,9 @@ struct CompEvents {
 //и находить event -- момент добавления и удаления отрезка
 //при добалвение проверяем отрезок с соседями,
 //при удалении проверяем соседей
-void solve(const vector<Segment>& a) {
+pair<int, int> findIntersectingSegments(const vector<Segment>& a) {
     int n = static_cast<int>(a.size());
-    pair<int, int> ans = std::make_pair(-1, -1);
+    pair<int, int> is_itersect = std::make_pair(-1, -1);
 
     vector<Event> events;
 
@@ -118,11 +137,11 @@ void solve(const vector<Segment>& a) {
 
             //нашли пересечение
             if (next != order_of_segments.end() && intersect(*next, a[events[i].numner_of_segment])) {
-                ans = std::make_pair(next->number, events[i].numner_of_segment);
+                is_itersect = std::make_pair(next->number, events[i].numner_of_segment);
                 break;
             }
             if (prev != order_of_segments.end() && intersect(*prev, a[events[i].numner_of_segment])) {
-                ans = std::make_pair(prev->number, events[i].numner_of_segment);
+                is_itersect = std::make_pair(prev->number, events[i].numner_of_segment);
                 break;
             }
 
@@ -143,7 +162,7 @@ void solve(const vector<Segment>& a) {
             }
 
             if (next != order_of_segments.end() && prev != order_of_segments.end() && intersect(*next, *prev)) {
-                ans = std::make_pair(prev->number, next->number);
+                is_itersect = std::make_pair(prev->number, next->number);
                 break;
             }
 
@@ -151,11 +170,7 @@ void solve(const vector<Segment>& a) {
         }
     }
 
-    if (ans.first == -1 && ans.second == -1) {
-        std::cout << "NO" << "\n";
-    } else {
-        std::cout << "YES" << "\n" << ans.first + 1 << " " << ans.second + 1;
-    }
+    return is_itersect;
 }
 
 //смотрим на проекции по х и у
@@ -170,9 +185,9 @@ bool intersectOfProjection(double l1, double r1, double l2, double r2) {
 }
 
 //возвращаем знак произведения
-int crossProduct(const Point& a, const Point& b, const Point& c) {
+int SignOfCrossProduct(const Point& a, const Point& b, const Point& c) {
     double temp = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-    return std::abs(temp) < eps ? 0 : temp > 0 ? 1 : -1;
+    return std::abs(temp) < EPS ? 0 : temp > 0 ? 1 : -1;
 }
 
 bool intersect(const Segment& a, const Segment& b) {
@@ -183,68 +198,43 @@ bool intersect(const Segment& a, const Segment& b) {
     bool sec_step = intersectOfProjection(a.begin.y, a.end.y, b.begin.y, b.end.y);
 
     //теперь фиксируем один отрезок а с концами другого ищем век произведение
-    bool th_step = crossProduct(a.begin, a.end, b.begin) * crossProduct(a.begin, a.end, b.end) <= 0;
+    bool th_step = SignOfCrossProduct(a.begin, a.end, b.begin) * SignOfCrossProduct(a.begin, a.end, b.end) <= 0;
 
     //повторяем с другим отрезком
-    bool four_step = crossProduct(b.begin, b.end, a.begin) * crossProduct(b.begin, b.end, a.end) <= 0;
+    bool four_step = SignOfCrossProduct(b.begin, b.end, a.begin) * SignOfCrossProduct(b.begin, b.end, a.end) <= 0;
 
     return first_step && sec_step && th_step && four_step;
 }
 
-bool operator< (const Segment& a, const Segment& b) {
+bool operator<(const Segment& a, const Segment& b) {
     double x = std::max(std::min(a.begin.x, a.end.x), std::min(b.begin.x, b.end.x));
     return a.get_y(x) < b.get_y(x);
 }
 
 
 int main() {
-    //while (true)
-    //{
-    //    int n;
-    //    n = rand() % 3 + 1;
-
-    //    vector<Segment> a;
-
-    //    std::cout << "/////////////////////" << "\n";
-
-    //    std::cout << n << "\n";
-
-    //    for (int i = 0; i < n; ++i) {
-    //        Point begin;
-    //        Point end;
-
-    //        /*std::cin >> begin.x >> begin.y >> end.x >> end.y;*/
-
-    //        begin.x = rand() % 5;
-    //        begin.y = rand() % 5;
-    //        end.x = rand() % 5;
-    //        end.y = rand() % 5;
-
-    //        std::cout << begin.x << " " << begin.y << " " << end.x << " " << end.y << "\n";
-
-    //        Segment temp(begin, end, i);
-    //        a.push_back(temp);
-    //    }
-
-    //    solve(a);
-    //}
-
     int n;
     std::cin >> n;
 
     vector<Segment> a;
 
     for (int i = 0; i < n; ++i) {
-        Point begin;
-        Point end;
+        Segment temp;
 
-        std::cin >> begin.x >> begin.y >> end.x >> end.y;
+        std::cin >> temp;
+        temp.number = i;
 
-        Segment temp(begin, end, i);
         a.push_back(temp);
     }
 
-    solve(a);
+    pair<int, int> is_intersect = findIntersectingSegments(a);
+
+    if (is_intersect.first == -1 && is_intersect.second == -1) {
+        std::cout << "NO" << "\n";
+    }
+    else {
+        std::cout << "YES" << "\n" << is_intersect.first + 1 << " " << is_intersect.second + 1;
+    }
 
     return 0;
 }
