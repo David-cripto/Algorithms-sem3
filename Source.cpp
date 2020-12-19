@@ -19,6 +19,11 @@ struct Point {
     long long y;
 };
 
+std::istream& operator >> (std::istream& in, Point& temp) {
+    in >> temp.x >> temp.y;
+    return in;
+}
+
 //квадрат расстояния
 long double squaredDist(const Point& p1, const Point& p2) {
     return (p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y);
@@ -100,7 +105,7 @@ long long findMinYInd(const vector<Point>& A) {
     return ans;
 }
 
-void solve(vector<Point>& A, vector<Point>& B) {
+long double findMixedArea(vector<Point>& A, vector<Point>& B) {
     long long ind_A = findMinYInd(A);
     long long ind_B = findMinYInd(B);
 
@@ -116,8 +121,10 @@ void solve(vector<Point>& A, vector<Point>& B) {
 
     vector<Point> C = sumOfMink(A, B);
     long double area_C = areaOfPolygon(C);
-    std::cout.precision(6);
-    std::cout << std::fixed << std::setprecision(6) << (area_C - area_A - area_B) / 2;
+
+    long double ans = (area_C - area_A - area_B) / 2;
+
+    return ans;
 }
 
 int main() {
@@ -128,22 +135,21 @@ int main() {
     std::cin >> n;
 
     for (long long i = 0; i < n; ++i) {
-        long long x, y;
-        std::cin >> x >> y;
-        Point temp(x, y);
+        Point temp;
+        std::cin >> temp;
         A.push_back(temp);
     }
 
     std::cin >> m;
 
     for (long long i = 0; i < m; ++i) {
-        long long x, y;
-        std::cin >> x >> y;
-        Point temp(x, y);
+        Point temp;
+        std::cin >> temp;
         B.push_back(temp);
     }
     
-    solve(A, B);
+    std::cout.precision(6);
+    std::cout << std::fixed << std::setprecision(6) << findMixedArea(A, B);
 
     return 0;
 }
