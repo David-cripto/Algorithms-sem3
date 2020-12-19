@@ -21,12 +21,21 @@ struct  Point;
 struct  Face;
 
 void rotate(Point& p, double angle);
-vector<Point*> downHull(std::vector<Point>& pointers, int left, int right);
+vector<Point*> downHull(std::vector<Point>& points, int left, int right);
 void findBridge(Point*& u, Point*& v);
 void findEvents(vector<Point*>& ans, vector<Point*>& rec1, vector<Point*>& rec2, Point*& u, Point*& v);
-double crossPorduct(const Point* p1, const Point* p2, const Point* p3);
+double crossProduct(const Point* p1, const Point* p2, const Point* p3);
 double calculateTime(const Point* p1, const Point* p2, const Point* p3);
 void buildFace(vector<Face>& ans, vector<Point*>& points, int number_of_case);
+
+enum Cases {
+	FIRST_CASE,
+	SECOND_CASE,
+	THIRD_CASE,
+	FOURTH_CASE,
+	FIFTH_CASE,
+	SIXTH_CASE,
+};
 
 struct Point {
 	double x;
@@ -51,26 +60,90 @@ struct Point {
 			prev->next = this;
 			next->prev = this;
 			return true;
-		} else {//удаление
+		}
+		else {//удаление
 			prev->next = next;
 			next->prev = prev;
 			return false;
 		}
 	}
+
+	Point& operator += (const Point& other);
+	Point& operator -= (const Point& other);
 };
+
+std::istream& operator >> (std::istream& in, Point& temp) {
+	in >> temp.x >> temp.y >> temp.z;
+	return in;
+}
+
+Point operator + (const Point& other1, const Point& other2);
+Point operator - (const Point& other1, const Point& other2);
+Point operator * (double number, const Point& other);
+Point operator * (const Point& other, double number);
+
+Point& Point::operator+=(const Point& other) {
+	this->x += other.x;
+	this->y += other.y;
+	this->z += other.z;
+
+	return *this;
+}
+
+Point& Point::operator-=(const Point& other) {
+	this->x -= other.x;
+	this->y -= other.y;
+	this->z -= other.z;
+
+	return *this;
+}
+
+Point operator-(const Point& other1, const Point& other2) {
+	Point temp(other1);
+
+	temp -= other2;
+
+	return temp;
+}
+
+Point operator*(double number, const Point& other) {
+	Point temp(other);
+	temp.x *= number;
+	temp.y *= number;
+	temp.z *= number;
+
+	return temp;
+}
+
+Point operator*(const Point& other, double number) {
+	Point temp(other);
+	temp.x *= number;
+	temp.y *= number;
+	temp.z *= number;
+
+	return temp;
+}
+
+Point operator+(const Point& other1, const Point& other2) {
+	Point temp(other1);
+
+	temp += other2;
+
+	return temp;
+}
 
 //грани многоугольника
 struct Face {
 
 	//точки из которых состоит грань
-    int f_point;
-    int s_point;
-    int th_point;
+	int f_point;
+	int s_point;
+	int th_point;
 
-    Face(int first, int second, int third)
-        : f_point(first)
-        , s_point(second)
-        , th_point(third) {}
+	Face(int first, int second, int third)
+		: f_point(first)
+		, s_point(second)
+		, th_point(third) {}
 
 	Face() = default;
 
@@ -78,45 +151,54 @@ struct Face {
 		if (s_point < f_point && s_point < th_point) {
 			std::swap(f_point, s_point);
 			std::swap(s_point, th_point);
-		} else if (th_point < f_point && th_point < s_point) {
+		}
+		else if (th_point < f_point && th_point < s_point) {
 			std::swap(s_point, th_point);
 			std::swap(f_point, s_point);
 		}
 	}
 };
 
+std::ostream& operator << (std::ostream& out, const Face& temp);
+
+std::ostream& operator<<(std::ostream& out, const Face& temp) {
+	out << temp.f_point << " " << temp.s_point << " " << temp.th_point;
+
+	return out;
+}
+
 //компаратор для сортировки по х, применяем когда проецируем
 struct CompPoint {
-    bool operator()(const Point& p1, const Point& p2) {
+	bool operator()(const Point& p1, const Point& p2) {
 		return p1.x < p2.x;
-    }
+	}
 }cmp_point;
 
-vector<Face>algChan(vector<Point>& pointers) {
-	int n = static_cast<int>(pointers.size());
+vector<Face>algChan(vector<Point>& all_points) {
+	int n = static_cast<int>(all_points.size());
 	//сортируем точки по х
 	//Для чего?
 	//Ответ с отсылкой на статью: "Sort the points pˆ1, . . . , pˆn in increasing x-coordinates (recalling
 	//that points only move vertically).We use divide - and -conquer to solve the kinetic 2 - d problem."
-	std::sort(pointers.begin(), pointers.end(), cmp_point);
+	std::sort(all_points.begin(), all_points.end(), cmp_point);
 
 	//самая интересная часть алогритма
 	//Идея:
 	//Строим down hull и upper hull(Они строятся симметрично, поэтому
 	//хватит одной функции -- downHull)
 	//потом склеиваем их и получаем нужную нам оболочку
-	vector<Point*> points = downHull(pointers, 0, n);
+	vector<Point*> points = downHull(all_points, 0, n);
 	vector<Face> ans;
 
 	buildFace(ans, points, 1);//строим грани из точек нах в down hull
 
 	//переставляем точки для upper hull
 	for (int i = 0; i < n; ++i) {
-		pointers[i].next = nullptr;
-		pointers[i].prev = nullptr;
-		pointers[i].z = -pointers[i].z;
+		all_points[i].next = nullptr;
+		all_points[i].prev = nullptr;
+		all_points[i].z = -all_points[i].z;
 	}
-	points = downHull(pointers, 0, n);
+	points = downHull(all_points, 0, n);
 
 	buildFace(ans, points, 2);//строим грани из точек нах в upper hull
 
@@ -124,7 +206,7 @@ vector<Face>algChan(vector<Point>& pointers) {
 }
 
 //Ищем event(один из 6-ти случаев в статье) рекурсивно с помощью divide - and -conquer 
-vector<Point*> downHull(std::vector<Point>& pointers, int left, int right) {
+vector<Point*> downHull(std::vector<Point>& points, int left, int right) {
 	//осталась одна точка возвращаем пустой вектор
 	if (right - left == 1) {
 		vector<Point*> a;
@@ -133,11 +215,11 @@ vector<Point*> downHull(std::vector<Point>& pointers, int left, int right) {
 
 	int med = (left + right) / 2;
 
-	vector<Point*> rec1 = downHull(pointers, left, med);
-	vector<Point*> rec2 = downHull(pointers, med, right);
+	vector<Point*> rec1 = downHull(points, left, med);
+	vector<Point*> rec2 = downHull(points, med, right);
 
-	Point* u = &pointers[med - 1];
-	Point* v = &pointers[med];
+	Point* u = &points[med - 1];
+	Point* v = &points[med];
 
 	//находим мост
 	findBridge(u, v);
@@ -154,23 +236,26 @@ vector<Point*> downHull(std::vector<Point>& pointers, int left, int right) {
 
 	for (int i = n_ans - 1; i >= 0; --i) {
 		Point* cur_ver = ans[i];
-		
+
 		//левее u в L, либо правее v в R по x, то совершаем событие
 		if (cur_ver->x <= u->x || cur_ver->x >= v->x) {
 			cur_ver->doEvent();
 			if (cur_ver == u) {
 				u = u->prev;
-			} else if (cur_ver == v) {
+			}
+			else if (cur_ver == v) {
 				v = v->next;
 			}
-		} else {
+		}
+		else {
 			v->prev = cur_ver;
 			u->next = cur_ver;
 			cur_ver->prev = u;
 			cur_ver->next = v;
-			if (cur_ver->x <= pointers[med - 1].x) {
+			if (cur_ver->x <= points[med - 1].x) {
 				u = cur_ver;
-			} else {
+			}
+			else {
 				v = cur_ver;
 			}
 		}
@@ -181,16 +266,18 @@ vector<Point*> downHull(std::vector<Point>& pointers, int left, int right) {
 
 //функция поиска bridge
 void findBridge(Point*& u, Point*& v) {
-//Ищем bridge начиная с "starts with u = pˆbn/2c and 
-//v = pˆbn/2c+1 and repeatedly advances u leftward on L 
-//and v rightward on R, until u−uv and uvv+ both form 
-//counterclockwise turns"
+	//Ищем bridge начиная с "starts with u = pˆbn/2c and 
+	//v = pˆbn/2c+1 and repeatedly advances u leftward on L 
+	//and v rightward on R, until u−uv and uvv+ both form 
+	//counterclockwise turns"
 	while (true) {
-		if (crossPorduct(u, v, v->next) < 0) {
+		if (crossProduct(u, v, v->next) < 0) {
 			v = v->next;
-		} else if (crossPorduct(u->prev, u, v) < 0) {
+		}
+		else if (crossProduct(u->prev, u, v) < 0) {
 			u = u->prev;
-		} else {
+		}
+		else {
 			break;
 		}
 	}
@@ -254,30 +341,35 @@ void findEvents(vector<Point*>& ans, vector<Point*>& rec1, vector<Point*>& rec2,
 		}
 
 		//перебор случаев
-		if (min_ind == 0) {
+		if (min_ind == FIRST_CASE) {
 			// левее u в L
 			if (l->x < u->x) {
 				ans.push_back(l);
 			}
 			l->doEvent();
 			temp1++;
-		} else if (min_ind == 1) {
+		}
+		else if (min_ind == SECOND_CASE) {
 			// левее r в R
 			if (r->x > v->x) {
 				ans.push_back(r);
 			}
 			r->doEvent();
 			temp2++;
-		} else if (min_ind == 2) {
+		}
+		else if (min_ind == THIRD_CASE) {
 			ans.push_back(v);
 			v = v->next;
-		} else if (min_ind == 3) {
+		}
+		else if (min_ind == FOURTH_CASE) {
 			v = v->prev;
 			ans.push_back(v);
-		} else if (min_ind == 4) {
+		}
+		else if (min_ind == FIFTH_CASE) {
 			ans.push_back(u);
 			u = u->prev;
-		} else if (min_ind == 5) {
+		}
+		else if (min_ind == SIXTH_CASE) {
 			u = u->next;
 			ans.push_back(u);
 		}
@@ -291,10 +383,10 @@ double calculateTime(const Point* p1, const Point* p2, const Point* p3) {
 	if (p1 == nullptr || p2 == nullptr || p3 == nullptr) {
 		return infinity;
 	}
-	return ((p2->x - p1->x) * (p3->z - p2->z) - (p2->z - p1->z) * (p3->x - p2->x)) / crossPorduct(p1, p2, p3);
+	return ((p2->x - p1->x) * (p3->z - p2->z) - (p2->z - p1->z) * (p3->x - p2->x)) / crossProduct(p1, p2, p3);
 }
 
-double crossPorduct(const Point* p1, const Point* p2, const Point* p3) {
+double crossProduct(const Point* p1, const Point* p2, const Point* p3) {
 	if (p1 == nullptr || p2 == nullptr || p3 == nullptr) {
 		return true;
 	}
@@ -312,7 +404,8 @@ void buildFace(vector<Face>& ans, vector<Point*>& points, int number_of_case) {
 		//меняем точки внутр грани
 		if (number_of_case == 1 && !points[i]->doEvent()) {//заходит, если точка была удалена в 1-ом случае
 			std::swap(cur_face.f_point, cur_face.s_point);
-		} else if (number_of_case == 2 && points[i]->doEvent()) {//заходит, если точка была добавлена во 2-ом случае
+		}
+		else if (number_of_case == 2 && points[i]->doEvent()) {//заходит, если точка была добавлена во 2-ом случае
 			std::swap(cur_face.f_point, cur_face.s_point);
 		}
 		ans.push_back(cur_face);
@@ -326,15 +419,20 @@ struct CompFaces {
 	bool operator()(const Face& f1, const Face& f2) {
 		if (f1.f_point < f2.f_point) {
 			return true;
-		} else if (f1.f_point > f2.f_point) {
+		}
+		else if (f1.f_point > f2.f_point) {
 			return false;
-		} else if(f1.s_point < f2.s_point){
-			return true; 
-		} else if (f1.s_point > f2.s_point) {
-			return false;
-		} else if (f1.th_point < f2.th_point) {
+		}
+		else if (f1.s_point < f2.s_point) {
 			return true;
-		} else {
+		}
+		else if (f1.s_point > f2.s_point) {
+			return false;
+		}
+		else if (f1.th_point < f2.th_point) {
+			return true;
+		}
+		else {
 			return false;
 		}
 	}
@@ -347,17 +445,17 @@ int main() {
 
 	for (int i = 0; i < m; ++i) {
 		std::cin >> n;
-		vector<Point> pointers;
+		vector<Point> points;
 
 		for (int j = 0; j < n; ++j) {
 			Point temp;
-			std::cin >> temp.x >> temp.y >> temp.z;
+			std::cin >> temp;
 			temp.number = j;
 			rotate(temp, 0.01);
-			pointers.push_back(temp);
+			points.push_back(temp);
 		}
 
-		vector<Face> hull = algChan(pointers);
+		vector<Face> hull = algChan(points);
 
 		int n_h = static_cast<int>(hull.size());
 
@@ -372,7 +470,7 @@ int main() {
 		//вывод
 		std::cout << hull.size() << std::endl;
 		for (int i = 0; i < n_h; ++i) {
-			std::cout << 3 << " " << hull[i].f_point << " " << hull[i].s_point << " " << hull[i].th_point << "\n";
+			std::cout << 3 << " " << hull[i] << "\n";
 		}
 	}
 	return 0;
@@ -395,15 +493,20 @@ int main() {
 //как при повороте базисных векторов на угол angle относительно 
 //соответствующей оси
 void rotate(Point& p, double angle) {
+	//новые координаты по x, y, z
+	double new_x;
+	double new_y;
+	double new_z;
+
 	//Поворачиваем относительно оси Y и видим поворот плоскости OZX на угол angle
-	double new_x = p.x * cos(angle) + p.z * sin(angle);
-	double new_z = -p.x * sin(angle) + p.z * cos(angle);
+	new_x = p.x * cos(angle) + p.z * sin(angle);
+	new_z = -p.x * sin(angle) + p.z * cos(angle);
 	p.x = new_x;
 	p.z = new_z;
 
 	//Поворачиваем относительно оси X и видим поворот плоскости OZX на угол angle
 	new_z = p.z * cos(angle) + p.y * sin(angle);
-	double new_y = -p.z * sin(angle) + p.y * cos(angle);
+	new_y = -p.z * sin(angle) + p.y * cos(angle);
 	p.z = new_z;
 	p.y = new_y;
 
