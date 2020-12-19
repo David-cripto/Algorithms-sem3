@@ -18,16 +18,23 @@ struct Point {
     long long y;
 };
 
+std::istream& operator >> (std::istream& in, Point& temp) {
+    in >> temp.x >> temp.y;
+    return in;
+}
+
 struct ConvexHull {
-    ConvexHull(vector<Point>& pointers) :
-        pointers(pointers), perimetr(0) {}
+    ConvexHull(const vector<Point>& pointers) :
+        points_(pointers), perimeter_(0) {}
 
     void algGraham();
 
+    long double findPerimeter();
 private:
-    vector<Point> pointers;//точки на плоскости
-    Point p0;//самая нижняя и левая точка. От неё будет идти отсчёт
-    long double perimetr;
+    vector<Point> points_;//точки на плоскости
+    Point p0_;//самая нижняя и левая точка. От неё будет идти отсчёт
+    long double perimeter_;
+    stack<Point> S_;
 };
 
 Point nextToTop(stack<Point>& S) {
@@ -62,9 +69,9 @@ int crossProduct(Point p, Point p1, Point p2) {
 struct Compare {
     bool operator()(const Point& p1, const Point& p2) {
         //находим ориентацию
-        long long det = crossProduct(p0, p1, p2);
+        long long det = crossProduct(p0_, p1, p2);
         if (det == 0) {//коллинеарность
-            if (dist(p0, p2) > dist(p0, p1)) {
+            if (dist(p0_, p2) > dist(p0_, p1)) {
                 return true;
             }
             else {
@@ -79,83 +86,81 @@ struct Compare {
         }
     }
     Compare(Point p0) :
-        p0(p0) {}
+        p0_(p0) {}
 
 private:
-    Point p0;
+    Point p0_;
 };
 
 int main() {
     long long n;
     std::cin >> n;
-    vector<Point> pointers;
+    vector<Point> points;
 
     for (int i = 0; i < n; ++i) {
-        long long x;
-        long long y;
-        std::cin >> x >> y;
-        Point temp(x, y);
-        pointers.push_back(temp);
+        Point temp;
+        std::cin >> temp;
+        
+        points.push_back(temp);
     }
 
-    ConvexHull ans(pointers);
+    ConvexHull ans(points);
+
     ans.algGraham();
+    std::cout << std::setprecision(10) << ans.findPerimeter();
+
     return 0;
 }
 
 void ConvexHull::algGraham() {
-    long long n = static_cast<long long>(pointers.size());
+    long long n = static_cast<long long>(points_.size());
     // ищем нижнюю точку
-    long long ymin = pointers[0].y;
+    long long ymin = points_[0].y;
     long long min = 0;
     for (long long i = 1; i < n; i++) {
-        long long y = pointers[i].y;
+        long long y = points_[i].y;
 
-        if ((y < ymin) || (ymin == y && pointers[i].x < pointers[min].x)) {// сорт по y, потом по x. Самый нижние => самые левые из нижних 
-            ymin = pointers[i].y;
+        if ((y < ymin) || (ymin == y && points_[i].x < points_[min].x)) {// сорт по y, потом по x. Самый нижние => самые левые из нижних 
+            ymin = points_[i].y;
             min = i;
         }
     }
 
-    std::swap(pointers[0], pointers[min]);//на нулевую позицию ставим наш минимум
+    std::swap(points_[0], points_[min]);//на нулевую позицию ставим наш минимум
 
     // сортирую относительно моей точки по углу. На хабре такая красивая картинка была, жалко не могу её сюда вставить :(
-    Compare comp(pointers[0]);
-    vector<Point>::iterator it = pointers.begin();
+    Compare comp(points_[0]);
+    vector<Point>::iterator it = points_.begin();
     ++it;
-    std::sort(it, pointers.end(), comp);
+    std::sort(it, points_.end(), comp);
 
     //закидываем в стек первые три точки. точка 0 и 1 точно принадлежат вып. оболочке
-    stack<Point> S;
-    S.push(pointers[0]);
-    S.push(pointers[1]);
-    S.push(pointers[2]);
+    S_.push(points_[0]);
+    S_.push(points_[1]);
+    S_.push(points_[2]);
 
     for (int i = 3; i < n; ++i) {
-        Point np = pointers[i];
+        Point np = points_[i];
 
-        //while (crossProduct(nextToTop(S), S.top(), pointers[i]) == 0) {//лежат на одной прямой
-        //    
-
-        //}
-
-        while (S.size() > 1 && crossProduct(nextToTop(S), S.top(), pointers[i]) != 2) {// по часовой, удаляем
-            S.pop();
+        while (S_.size() > 1 && crossProduct(nextToTop(S_), S_.top(), points_[i]) != 2) {// по часовой, удаляем
+            S_.pop();
         }
-        S.push(pointers[i]);//против часовой пушим в стек
+        S_.push(points_[i]);//против часовой пушим в стек
     }
+}
 
-    Point p0 = S.top();
-    Point p1 = S.top();
-    S.pop();
+long double ConvexHull::findPerimeter() {
+    Point p0 = S_.top();
+    Point p1 = S_.top();
+    S_.pop();
 
-    while (!S.empty()) {
-        Point p2 = S.top();
-        perimetr += sqrt(dist(p1, p2));
+    while (!S_.empty()) {
+        Point p2 = S_.top();
+        perimeter_ += sqrt(dist(p1, p2));
         p1 = p2;
-        S.pop();
+        S_.pop();
     }
-    perimetr += sqrt(dist(p0, p1));
+    perimeter_ += sqrt(dist(p0, p1));
 
-    std::cout << std::setprecision(10) << perimetr;
+    return perimeter_;
 }
